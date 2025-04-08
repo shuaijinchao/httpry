@@ -19,6 +19,7 @@ my $SUMMARY_CAP = 10;
 # GLOBAL VARIABLES
 # -----------------------------------------------------------------------------
 my %top_hosts = ();
+my %top_urls = ();
 my %top_talkers = ();
 my %filetypes = ();
 my %response_codes = ();
@@ -65,6 +66,12 @@ sub main {
                 $requests++;
 
                 $top_hosts{$record->{"host"}}++ if exists $record->{"host"};
+                
+                if (exists $record->{"host"} && exists $record->{"request-uri"}) {
+                    my $full_url = $record->{"host"} . $record->{"request-uri"};
+                    $top_urls{$full_url}++;
+                }
+                
                 $top_talkers{$record->{"source-ip"}}++ if exists $record->{"source-ip"};
 
                 if (exists $record->{"request-uri"}) {
@@ -127,6 +134,7 @@ sub _write_output_file {
         my $hour;
 
         my $num_top_hosts = keys %top_hosts;
+        my $num_top_urls = keys %top_urls;
         my $num_top_talkers = keys %top_talkers;
         my $num_response_codes = keys %response_codes;
         my $num_filetypes = keys %filetypes;
@@ -149,6 +157,15 @@ sub _write_output_file {
                 print OUTFILE "\n\n$summary_cap/$num_top_hosts VISITED HOSTS\n\n";
                 foreach $key (sort { $top_hosts{$b} <=> $top_hosts{$a} } keys %top_hosts) {
                         print OUTFILE "$top_hosts{$key}\t" . _percent_of($top_hosts{$key}, $requests) . "%\t$key\n";
+                        last if (++$count == $summary_cap);
+                }
+        }
+
+        if ($num_top_urls) {
+                $count = 0;
+                print OUTFILE "\n\n$summary_cap/$num_top_urls VISITED FULL URLS\n\n";
+                foreach $key (sort { $top_urls{$b} <=> $top_urls{$a} } keys %top_urls) {
+                        print OUTFILE "$top_urls{$key}\t" . _percent_of($top_urls{$key}, $requests) . "%\t$key\n";
                         last if (++$count == $summary_cap);
                 }
         }
